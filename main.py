@@ -48,7 +48,6 @@ class EmailInboxIn(BaseModel):
 
     raw_payload: Optional[Dict[str, Any]]
 
-
 # ----------------------
 # Health Check
 # ----------------------
@@ -64,9 +63,8 @@ def health():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ----------------------
-# Insert Email API
+# INSERT Email API
 # ----------------------
 @app.post("/email-inbox")
 def insert_email(email: EmailInboxIn):
@@ -123,3 +121,144 @@ def insert_email(email: EmailInboxIn):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Insert failed: {e}")
+
+# ======================================================
+#                    FETCH APIs
+# ======================================================
+
+# ----------------------
+# Get all emails
+# ----------------------
+@app.get("/email-inbox")
+def get_emails(limit: int = 20, offset: int = 0):
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute(
+            """
+            SELECT *
+            FROM "Puma_L1_AI".email_inbox
+            ORDER BY received_at DESC
+            LIMIT %s OFFSET %s
+            """,
+            (limit, offset),
+        )
+
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        return rows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ----------------------
+# Get one email by ID
+# ----------------------
+@app.get("/email-inbox/{email_id}")
+def get_email(email_id: int):
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute(
+            """
+            SELECT *
+            FROM "Puma_L1_AI".email_inbox
+            WHERE email_id = %s
+            """,
+            (email_id,),
+        )
+
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Email not found")
+
+        return row
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ----------------------
+# Get all cases
+# ----------------------
+@app.get("/cases")
+def get_cases(limit: int = 20, offset: int = 0):
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute(
+            """
+            SELECT *
+            FROM "Puma_L1_AI".cases
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+            """,
+            (limit, offset),
+        )
+
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        return rows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ----------------------
+# Get AI decisions
+# ----------------------
+@app.get("/ai-decisions")
+def get_ai_decisions(limit: int = 20, offset: int = 0):
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute(
+            """
+            SELECT *
+            FROM "Puma_L1_AI".ai_decisions
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+            """,
+            (limit, offset),
+        )
+
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        return rows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ----------------------
+# Get Risk events
+# ----------------------
+@app.get("/risk-events")
+def get_risk_events(limit: int = 20, offset: int = 0):
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute(
+            """
+            SELECT *
+            FROM "Puma_L1_AI".risk_events
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+            """,
+            (limit, offset),
+        )
+
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        return rows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
