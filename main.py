@@ -364,6 +364,39 @@ def get_orders(email: Optional[str] = None, limit: int = 20, offset: int = 0):
     try:
         conn = get_conn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        if email:
+            cur.execute(
+                """
+                SELECT * FROM "Puma_L1_AI".orders 
+                WHERE email = %s 
+                ORDER BY created_at DESC
+                """,
+                (email,)
+            )
+        else:
+            cur.execute(
+                """
+                SELECT * FROM "Puma_L1_AI".orders 
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+                """,
+                (limit, offset)
+            )
+            
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return rows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/seed-data")
+def seed_data():
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
         # 2. Dummy Data - Comprehensive Test Set
         
         # A. Happy Path Scenarios
@@ -397,31 +430,11 @@ def get_orders(email: Optional[str] = None, limit: int = 20, offset: int = 0):
             ('PUMA-2003', 'john.doe@example.com', 'Created', 'Socks 3-Pack', 499.00, NOW() - INTERVAL '1 HOUR')
             ON CONFLICT (order_id) DO NOTHING;
         """)
-        
-        if email:
-            cur.execute(
-                """
-                SELECT * FROM "Puma_L1_AI".orders 
-                WHERE email = %s 
-                ORDER BY created_at DESC
-                """,
-                (email,)
-            )
-        else:
-            cur.execute(
-                """
-                SELECT * FROM "Puma_L1_AI".orders 
-                ORDER BY created_at DESC
-                LIMIT %s OFFSET %s
-                """,
-                (limit, offset)
-            )
-            
-        rows = cur.fetchall()
-        conn.commit() # Commit the inserts
+
+        conn.commit()
         cur.close()
         conn.close()
-        return rows
+        return {"status": "seeded", "message": "Dummy orders created"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
