@@ -359,6 +359,98 @@ def get_cases(limit: int = 20, offset: int = 0):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/orders")
+def get_orders(email: Optional[str] = None, limit: int = 20, offset: int = 0):
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        # 2. Dummy Data - Comprehensive Test Set
+        
+        # A. Happy Path Scenarios
+        cur.execute("""
+            INSERT INTO "Puma_L1_AI".orders (order_id, email, status, items, amount, created_at)
+            VALUES 
+            ('PUMA-1001', 'soorya@example.com', 'Shipped', 'Nitro Running Shoes', 12999.00, NOW() - INTERVAL '2 DAYS'),
+            ('PUMA-1002', 'user_created@example.com', 'Created', 'Puma White Sneakers', 4500.00, NOW() - INTERVAL '4 HOURS'),
+            ('PUMA-1003', 'user_packed@example.com', 'Packed', 'Gym Duffel Bag', 1599.00, NOW() - INTERVAL '1 DAY'),
+            ('PUMA-1004', 'user_delivered@example.com', 'Delivered', 'Ferrari Race T-Shirt', 2999.00, NOW() - INTERVAL '5 DAYS'),
+            ('PUMA-1005', 'user_returned@example.com', 'Returned', 'Yoga Mat', 1299.00, NOW() - INTERVAL '10 DAYS')
+            ON CONFLICT (order_id) DO UPDATE SET status = EXCLUDED.status;
+        """)
+
+        # B. Edge Cases & Issues
+        cur.execute("""
+            INSERT INTO "Puma_L1_AI".orders (order_id, email, status, items, amount, created_at)
+            VALUES 
+            ('PUMA-9001', 'stuck@example.com', 'Shipped', 'Track Pants Black', 2999.00, NOW() - INTERVAL '12 DAYS'), -- Stuck/Delayed
+            ('PUMA-9002', 'pradishshivani1729@gmail.com', 'Shipped', 'Puma Suede Classic', 6999.00, NOW() - INTERVAL '3 DAYS'), -- Your Test User
+            ('PUMA-9003', 'failed_delivery@example.com', 'Delivery Failed', 'Hoodie Grey', 3499.00, NOW() - INTERVAL '1 DAY')
+            ON CONFLICT (order_id) DO UPDATE SET status = EXCLUDED.status;
+        """)
+
+        # C. Multiple Orders Scenario (for table view testing)
+        cur.execute("""
+            INSERT INTO "Puma_L1_AI".orders (order_id, email, status, items, amount, created_at)
+            VALUES 
+            ('PUMA-2001', 'john.doe@example.com', 'Delivered', 'Puma T-Shirt Black', 1499.00, NOW() - INTERVAL '15 DAYS'),
+            ('PUMA-2002', 'john.doe@example.com', 'Shipped', 'Sneakers White', 4999.00, NOW() - INTERVAL '2 DAYS'),
+            ('PUMA-2003', 'john.doe@example.com', 'Created', 'Socks 3-Pack', 499.00, NOW() - INTERVAL '1 HOUR')
+            ON CONFLICT (order_id) DO NOTHING;
+        """)
+        
+        if email:
+            cur.execute(
+                """
+                SELECT * FROM "Puma_L1_AI".orders 
+                WHERE email = %s 
+                ORDER BY created_at DESC
+                """,
+                (email,)
+            )
+        else:
+            cur.execute(
+                """
+                SELECT * FROM "Puma_L1_AI".orders 
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+                """,
+                (limit, offset)
+            )
+            
+        rows = cur.fetchall()
+        conn.commit() # Commit the inserts
+        cur.close()
+        conn.close()
+        return rows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/orders/{order_id}")
+def get_order_by_id(order_id: str):
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute(
+            """
+            SELECT * FROM "Puma_L1_AI".orders 
+            WHERE order_id = %s
+            """,
+            (order_id,)
+        )
+            
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Order not found")
+            
+        return row
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/cases/{case_id}")
 def get_case(case_id: int):
     try:
